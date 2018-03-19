@@ -122,6 +122,10 @@ final class HttpMethodParams implements HttpMethodParamsInterface
             throw new InvalidRequestJsonException(json_last_error_msg());
         }
 
+        if ($content === '') {
+            $content = [];
+        }
+
         return $content;
     }
 
