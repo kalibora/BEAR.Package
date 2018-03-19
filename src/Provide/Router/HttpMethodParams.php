@@ -117,19 +117,19 @@ final class HttpMethodParams implements HttpMethodParamsInterface
             return [];
         }
 
+        // Allow empty body
         $stdIn = file_get_contents($this->stdIn);
-        error_log(var_export($stdIn, true)); // debug
         if ($stdIn === '') {
             return [];
         }
 
         $content = json_decode($stdIn, true);
-        error_log(var_export($content, true)); // debug
         $error = json_last_error();
         if ($error !== JSON_ERROR_NONE) {
             throw new InvalidRequestJsonException(json_last_error_msg());
         }
 
+        // Allow valid json but empty string ""
         if ($content === '') {
             $content = [];
         }
