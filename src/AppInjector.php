@@ -1,19 +1,15 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package;
 
 use BEAR\AppMeta\AbstractAppMeta;
-use BEAR\AppMeta\AppMeta;
-use BEAR\Package\Exception\InvalidContextException;
-use BEAR\Package\Provide\Resource\ResourceObjectModule;
-use Ray\Compiler\DiCompiler;
-use Ray\Compiler\Exception\NotCompiled;
+use BEAR\AppMeta\Meta;
+use Doctrine\Common\Cache\FilesystemCache;
 use Ray\Compiler\ScriptInjector;
 use Ray\Di\AbstractModule;
+use Ray\Di\Bind;
 use Ray\Di\Injector;
 use Ray\Di\InjectorInterface;
 use Ray\Di\Name;
@@ -21,9 +17,14 @@ use Ray\Di\Name;
 final class AppInjector implements InjectorInterface
 {
     /**
-     * @var AbstractModule
+     * @var AbstractAppMeta
      */
-    private $appModule;
+    private $appMeta;
+
+    /**
+     * @var string
+     */
+    private $context;
 
     /**
      * @var string
@@ -33,14 +34,41 @@ final class AppInjector implements InjectorInterface
     /**
      * @var string
      */
-    private $logDir;
+    private $appDir;
 
-    public function __construct($name, $contexts)
+    /**
+     * @var ScriptInjector
+     */
+    private $injector;
+
+    /**
+     * @var string
+     */
+    private $cacheSpace;
+
+    /**
+     * @var null|AbstractModule
+     */
+    private $module;
+
+    public function __construct(string $name, string $context, AbstractAppMeta $appMeta = null, string $cacheSpace = '')
     {
-        $appMeta = new AppMeta($name, $contexts);
-        $this->scriptDir = $appMeta->tmpDir;
-        $this->logDir = $appMeta->logDir;
-        $this->appModule = $this->newModule($appMeta, $contexts);
+        $this->context = $context;
+        $this->appMeta = $appMeta instanceof AbstractAppMeta ? $appMeta : new Meta($name, $context);
+        $this->cacheSpace = $cacheSpace;
+        $scriptDir = $this->appMeta->tmpDir . '/di';
+        ! \file_exists($scriptDir) && \mkdir($scriptDir);
+        $this->scriptDir = $scriptDir;
+        $appDir = $this->appMeta->tmpDir . '/app';
+        ! \file_exists($appDir) && \mkdir($appDir);
+        touch($appDir . '/.do_not_clear');
+        $this->appDir = $appDir;
+        $this->injector = new ScriptInjector($this->scriptDir, function () {
+            return $this->getModule();
+        });
+        if (! $cacheSpace) {
+            $this->clear();
+        }
     }
 
     /**
@@ -48,62 +76,53 @@ final class AppInjector implements InjectorInterface
      */
     public function getInstance($interface, $name = Name::ANY)
     {
-        try {
-            return $this->getInjector()->getInstance($interface, $name);
-        } catch (NotCompiled $e) {
-            file_put_contents(sprintf('%s/%s', $this->logDir, 'compile-err.log'), (string) $e);
-
-            throw $e;
-        }
+        return $this->injector->getInstance($interface, $name);
     }
 
     public function getOverrideInstance(AbstractModule $module, $interface, $name = Name::ANY)
     {
-        $appModule = clone $this->appModule;
+        $appModule = clone $this->getModule();
         $appModule->override($module);
 
         return (new Injector($appModule, $this->scriptDir))->getInstance($interface, $name);
     }
 
-    private function getInjector() : InjectorInterface
+    public function clear()
     {
-        $scriptInjector = new ScriptInjector($this->scriptDir);
-        try {
-            $injector = $scriptInjector->getInstance(InjectorInterface::class);
-        } catch (NotCompiled $e) {
-            $this->compile($this->appModule, $this->scriptDir);
-            $injector = $scriptInjector->getInstance(InjectorInterface::class);
+        if ((new Unlink)->once($this->appMeta->tmpDir)) {
+            return;
         }
-
-        return $injector;
+        ! is_dir($this->appMeta->tmpDir . '/di') && \mkdir($this->appMeta->tmpDir . '/di');
+        file_put_contents($this->scriptDir . ScriptInjector::MODULE, serialize($this->getModule()));
     }
 
-    private function compile(AbstractModule $module, string $scriptDir)
+    public function getCachedInstance($interface, $name = Name::ANY)
     {
-        $compiler = new DiCompiler($module, $scriptDir);
-        $compiler->compile();
+        $lockFile = $this->appMeta->appDir . '/composer.lock';
+        $this->cacheSpace .= file_exists($lockFile) ? (string) filemtime($lockFile) : '';
+        $cache = new FilesystemCache($this->appDir);
+        $id = $interface . $name . $this->context . $this->cacheSpace;
+        $instance = $cache->fetch($id);
+        if ($instance) {
+            return $instance;
+        }
+        $instance = $this->injector->getInstance($interface, $name);
+        $cache->save($id, $instance);
+
+        return $instance;
     }
 
-    /**
-     * Return configured module
-     */
-    private function newModule(AbstractAppMeta $appMeta, string $contexts) : AbstractModule
+    private function getModule() : AbstractModule
     {
-        $contextsArray = array_reverse(explode('-', $contexts));
-        $module = null;
-        foreach ($contextsArray as $context) {
-            $class = $appMeta->name . '\Module\\' . ucwords($context) . 'Module';
-            if (! class_exists($class)) {
-                $class = 'BEAR\Package\Context\\' . ucwords($context) . 'Module';
-            }
-            if (! is_a($class, AbstractModule::class, true)) {
-                throw new InvalidContextException($class);
-            }
-            /* @var $module AbstractModule */
-            $module = new $class($module);
+        if ($this->module instanceof AbstractModule) {
+            return $this->module;
         }
-        $module->install(new ResourceObjectModule($appMeta));
-        $module->override(new AppMetaModule($appMeta));
+        $module = (new Module)($this->appMeta, $this->context);
+        /* @var AbstractModule $module */
+        $container = $module->getContainer();
+        (new Bind($container, InjectorInterface::class))->toInstance($this->injector);
+        (new Bind($container, ''))->annotatedWith('cache_namespace')->toInstance($this->cacheSpace);
+        $this->module = $module;
 
         return $module;
     }

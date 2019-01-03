@@ -1,9 +1,7 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Provide\Router;
 
 use Aura\Cli\CliFactory;
@@ -33,7 +31,7 @@ class CliRouter implements RouterInterface
     private $stdIn;
 
     /**
-     * @var \Exception|null
+     * @var null|\Exception
      */
     private $terminateException;
 
@@ -52,6 +50,11 @@ class CliRouter implements RouterInterface
     public function __destruct()
     {
         file_exists($this->stdIn) && unlink($this->stdIn);
+    }
+
+    public function __wakeup()
+    {
+        $this->stdIo = (new CliFactory)->newStdio();
     }
 
     public function setTerminateException(\Exception $e)
@@ -142,7 +145,7 @@ class CliRouter implements RouterInterface
 
     private function validateArgs(array $globals)
     {
-        if ($globals['argc'] !== 3) {
+        if ($globals['argc'] < 3) {
             $this->error(basename($globals['argv'][0]));
             $this->terminate(Status::USAGE);
         }

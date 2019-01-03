@@ -1,9 +1,7 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Provide\Error;
 
 use BEAR\Resource\ResourceObject;
@@ -22,6 +20,8 @@ final class ProdVndErrorPage extends ResourceObject
     public function toString()
     {
         $this->view = json_encode($this->body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+
+        return $this->view;
     }
 
     private function getHeader($code) : array

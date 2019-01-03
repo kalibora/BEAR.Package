@@ -1,9 +1,7 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Provide\Transfer;
 
 use BEAR\Resource\Code;
@@ -15,24 +13,23 @@ class CliResponder implements TransferInterface
     /**
      * {@inheritdoc}
      */
-    public function __invoke(ResourceObject $resourceObject, array $server)
+    public function __invoke(ResourceObject $ro, array $server)
     {
         unset($server);
-        if (! $resourceObject->view) {
-            $resourceObject->toString();
+        if (! $ro->view) {
+            $ro->toString();
         }
         // code
-        $statusText = (new Code)->statusText[$resourceObject->code];
-        $ob = $resourceObject->code . ' ' . $statusText . PHP_EOL;
+        $statusText = (new Code)->statusText[$ro->code];
+        $ob = $ro->code . ' ' . $statusText . PHP_EOL;
         // header
-        foreach ($resourceObject->headers as $label => $value) {
+        foreach ($ro->headers as $label => $value) {
             $ob .= "{$label}: {$value}" . PHP_EOL;
         }
         // empty line
         $ob .= PHP_EOL;
         // body
-        $ob .= $resourceObject->view;
-
+        $ob .= (string) $ro->view;
         echo $ob;
     }
 }

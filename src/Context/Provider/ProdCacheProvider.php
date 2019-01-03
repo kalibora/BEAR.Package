@@ -1,9 +1,7 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Context\Provider;
 
 use BEAR\AppMeta\AbstractAppMeta;
@@ -28,7 +26,7 @@ class ProdCacheProvider implements ProviderInterface
     /**
      * @Named("namespace=cache_namespace")
      */
-    public function __construct(AbstractAppMeta $appMeta, $namespace)
+    public function __construct(AbstractAppMeta $appMeta, string $namespace)
     {
         $this->cacheDir = $appMeta->tmpDir . '/cache';
         $this->namespace = $namespace;

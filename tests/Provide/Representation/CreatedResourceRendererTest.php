@@ -1,10 +1,9 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Provide\Representation;
+
 namespace BEAR\Package\Provide\Representation;
 
 use BEAR\Package\AppInjector;
@@ -25,7 +24,7 @@ class CreatedResourceRendererTest extends TestCase
      */
     private $ro;
 
-    public function setUp()
+    protected function setUp()
     {
         $resource = (new AppInjector('FakeVendor\HelloWorld', 'hal-app'))->getInstance(ResourceInterface::class);
         $this->ro = $resource->post->uri('app://self/post')();
@@ -55,6 +54,7 @@ class CreatedResourceRendererTest extends TestCase
 }
 ';
         $this->assertSame($expected, $view);
+        $this->assertSame($expected, $this->ro->view);
 
         return $this->ro;
     }

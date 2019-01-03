@@ -1,9 +1,7 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Provide\Representation;
 
 use BEAR\Resource\AbstractRequest;
@@ -44,7 +42,7 @@ class HalRenderer implements RenderInterface
             return $ro->view;
         }
         $method = 'on' . ucfirst($ro->uri->method);
-        $annotations = $this->reader->getMethodAnnotations(new \ReflectionMethod($ro, $method));
+        $annotations = $this->reader->getMethodAnnotations(new \ReflectionMethod((object) $ro, $method));
 
         return $this->renderHal($ro, $annotations);
     }
@@ -69,6 +67,7 @@ class HalRenderer implements RenderInterface
                 if ($isDifferentSchema === true) {
                     $ro->body['_embedded'][$key] = $embedded()->body;
                     unset($ro->body[$key]);
+
                     continue;
                 }
                 unset($ro->body[$key]);
@@ -93,9 +92,8 @@ class HalRenderer implements RenderInterface
         $selfLink = $this->link->getReverseLink($path);
 
         $hal = new Hal($selfLink, $body);
-        $hal = $this->link->addHalLink($body, $annotations, $hal);
 
-        return $hal;
+        return $this->link->addHalLink($body, $annotations, $hal);
     }
 
     /**

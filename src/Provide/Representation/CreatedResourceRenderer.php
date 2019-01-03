@@ -1,9 +1,7 @@
 <?php
-/**
- * This file is part of the BEAR.Package package.
- *
- * @license http://opensource.org/licenses/MIT MIT
- */
+
+declare(strict_types=1);
+
 namespace BEAR\Package\Provide\Representation;
 
 use BEAR\Package\Exception\LocationHeaderRequestException;
@@ -38,7 +36,7 @@ class CreatedResourceRenderer implements RenderInterface
      */
     public function render(ResourceObject $ro)
     {
-        $url = parse_url($ro->uri);
+        $url = parse_url((string) $ro->uri);
         $locationUri = sprintf('%s://%s%s', $url['scheme'], $url['host'], $ro->headers['Location']);
         try {
             $locatedResource = $this->resource->uri($locationUri)();
@@ -46,11 +44,13 @@ class CreatedResourceRenderer implements RenderInterface
         } catch (\Exception $e) {
             $ro->code = 500;
             $ro->view = '';
+
             throw new LocationHeaderRequestException($locationUri, 0, $e);
         }
         $this->updateHeaders($ro);
+        $ro->view = $locatedResource->toString();
 
-        return $locatedResource->toString();
+        return $ro->view;
     }
 
     private function getReverseMatchedLink(string $uri) : string

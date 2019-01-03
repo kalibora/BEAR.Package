@@ -36,49 +36,30 @@ class UserTest extends TestCase
         $expectRo = '{
     "user": {
         "website": {
-            "uri": null,
-            "resourceObject": {
-                "url": "http:://example.org/1"
-            },
-            "method": "get",
-            "query": {
-                "id": "1"
-            },
-            "options": [],
-            "in": null,
-            "links": []
+            "url": "http:://example.org/1"
         },
         "contact": {
-            "uri": null,
-            "resourceObject": {
-                "contact": [
-                    {
-                        "id": "1",
-                        "name": "Athos"
-                    },
-                    {
-                        "id": "2",
-                        "name": "Porthos"
-                    },
-                    {
-                        "id": "3",
-                        "name": "Aramis"
-                    }
-                ]
-            },
-            "method": "get",
-            "query": {
-                "id": "1"
-            },
-            "options": [],
-            "in": null,
-            "links": []
+            "contact": [
+                {
+                    "id": "1",
+                    "name": "Athos"
+                },
+                {
+                    "id": "2",
+                    "name": "Porthos"
+                },
+                {
+                    "id": "3",
+                    "name": "Aramis"
+                }
+            ]
         },
         "id": "1",
         "name": "Koriym"
     }
 }
 ';
+        $f = (string) $ro;
         $this->assertSame($expectRo, (string) $ro);
     }
 }
